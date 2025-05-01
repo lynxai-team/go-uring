@@ -1,3 +1,5 @@
+//nolint
+
 //go:build linux
 
 package main
@@ -64,7 +66,7 @@ func makeBuffers() [][]byte {
 
 var buffs = makeBuffers()
 
-func main() {
+func main() { //nolint
 	flag.Parse()
 
 	port, err := strconv.Atoi(flag.Arg(0))
