@@ -12,7 +12,7 @@ import (
 	"syscall"
 	"time"
 
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 const (
@@ -87,8 +87,7 @@ func (r *NetworkReactor) Run(ctx context.Context) {
 	<-ctx.Done()
 
 	for _, loop := range r.loops {
-		loop.stopConsumer()
-		loop.stopPublisher()
+		loop.close()
 	}
 }
 
@@ -176,6 +175,10 @@ func newRingNetEventLoop(ring *uring.Ring, logger *log.Logger, registry *cbRegis
 
 func (loop *ringNetEventLoop) runConsumer(tickDuration time.Duration) {
 	// runtime.LockOSThread()
+<<<<<<< HEAD
+=======
+	defer close(loop.submitSignal)
+>>>>>>> d0e7e6b (untangle channel fuckery, add in a dialer)
 
 	cqeBuff := make([]*uring.CQEvent, cqeBuffSize)
 	for {
@@ -217,7 +220,6 @@ func (loop *ringNetEventLoop) runConsumer(tickDuration time.Duration) {
 	CheckCtxAndContinue:
 		select {
 		case <-loop.stopConsumerCh:
-			close(loop.stopConsumerCh)
 			return
 		default:
 			continue
@@ -225,14 +227,10 @@ func (loop *ringNetEventLoop) runConsumer(tickDuration time.Duration) {
 	}
 }
 
-func (loop *ringNetEventLoop) stopConsumer() {
-	loop.stopConsumerCh <- struct{}{}
-	<-loop.stopConsumerCh
-}
-
-func (loop *ringNetEventLoop) stopPublisher() {
-	loop.stopPublisherCh <- struct{}{}
-	<-loop.stopPublisherCh
+func (loop *ringNetEventLoop) close() {
+	close(loop.stopConsumerCh)
+	close(loop.stopPublisherCh)
+	close(loop.reqBuss)
 }
 
 func (loop *ringNetEventLoop) cancel(id RequestID) {
@@ -246,9 +244,6 @@ func (loop *ringNetEventLoop) cancel(id RequestID) {
 
 func (loop *ringNetEventLoop) runPublisher() {
 	runtime.LockOSThread()
-
-	defer close(loop.reqBuss)
-	defer close(loop.submitSignal)
 
 	var err error
 	for {
@@ -284,7 +279,6 @@ func (loop *ringNetEventLoop) runPublisher() {
 			}
 
 		case <-loop.stopPublisherCh:
-			close(loop.stopPublisherCh)
 			return
 		}
 	}

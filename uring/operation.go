@@ -421,3 +421,16 @@ func (op *ConnectOp) PrepSQE(sqe *SQEntry) {
 func (op *ConnectOp) Code() OpCode {
 	return ConnectCode
 }
+
+func (op *ConnectOp) Fd() int {
+	return int(op.fd)
+}
+
+func (op *ConnectOp) Addr() (net.Addr, error) {
+	sAddr, err := sockaddr.AnyToSockaddr(op.addr)
+	if err != nil {
+		return nil, err
+	}
+
+	return sockaddrnet.SockaddrToTCPAddr(sAddr), nil
+}
