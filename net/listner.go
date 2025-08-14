@@ -11,8 +11,8 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/outofforest/go-uring/reactor"
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/reactor"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 // defaultTCPKeepAlive is a default constant value for TCPKeepAlive times
@@ -132,6 +132,16 @@ func setKeepAlivePeriod(fd int, d time.Duration) error {
 
 func setDefaultListenerSockopts(s int) error {
 	err := os.NewSyscallError("setsockopt", syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1))
+	if err != nil {
+		return err
+	}
+
+	err = os.NewSyscallError("setsockopt", syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEPORT, 1))
+	if err != nil {
+		return err
+	}
+
+	err = os.NewSyscallError("setsockopt", syscall.SetsockoptInt(s, syscall.SOL_TCP, syscall.TCP_NODELAY, 1))
 	if err != nil {
 		return err
 	}
