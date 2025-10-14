@@ -57,10 +57,35 @@ const (
 	mkdirAtCode
 	symlinkAtCode
 	linkAtCode
+	msgRingCode
+	fsetxattrCode
+	setxattrCode
+	fgetxattrCode
+	getxattrCode
+	socketCode
+	uringCmdCode
+	sendZcCode
+	sendmsgZcCode
+	readMultishotCode
+	waitidCode
+	futexWaitCode
+	futexWakeCode
+	futexWaitvCode
+	fixedFdInstallCode
+	ftruncateCode
+	bindCode
+	listenCode
+	recvZcCode
+	epollWaitCode
+	readvFixedCode
+	writevFixedCode
+	pipeCode
+	lastCode
 )
 
 // NopOp - do not perform any I/O. This is useful for testing the performance of the io_uring implementation itself.
-type NopOp struct{}
+type NopOp struct {
+}
 
 func Nop() *NopOp {
 	return &NopOp{}
@@ -434,3 +459,27 @@ func (op *ConnectOp) Addr() (net.Addr, error) {
 
 	return sockaddrnet.SockaddrToTCPAddr(sAddr), nil
 }
+
+type SocketOp struct {
+	domain   int
+	typ      int
+	protocol int
+}
+
+// Socket operation, equivalent of a socket(2) system call.
+func Socket(domain, typ, protocol int) *SocketOp {
+	return &SocketOp{
+		domain:   domain,
+		typ:      typ,
+		protocol: protocol,
+	}
+}
+
+func (op *SocketOp) PrepSQE(sqe *SQEntry) {
+	sqe.fill(socketCode, int32(op.domain), 0, uint32(op.protocol), uint64(op.typ))
+}
+
+func (op *SocketOp) Code() OpCode {
+	return socketCode
+}
+

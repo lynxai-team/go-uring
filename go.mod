@@ -1,6 +1,6 @@
-module github.com/outofforest/go-uring
+module github.com/lynxai-team/go-uring
 
-go 1.23
+go 1.26.1
 
 require (
 	github.com/libp2p/go-sockaddr v0.2.0
