@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"runtime"
+	"sync/atomic"
 	"syscall"
 	"time"
 	"unsafe"
@@ -56,9 +57,12 @@ type Ring struct {
 
 	cqRing *cq
 	sqRing *sq
+
+	closed atomic.Bool
 }
 
 var ErrRingSetup = errors.New("ring setup")
+var ErrRingClosed = errors.New("ring is closed")
 
 type SetupOption func(params *ringParams)
 
@@ -74,6 +78,13 @@ func WithCQSize(sz uint32) SetupOption {
 	return func(params *ringParams) {
 		params.flags = params.flags | SetupCQSize
 		params.cqEntries = sz
+	}
+}
+
+// WithIOPoll enable IOPOLL option.
+func WithIOPoll() SetupOption {
+	return func(params *ringParams) {
+		params.flags = params.flags | setupIOPoll
 	}
 }
 
@@ -188,7 +199,14 @@ func (r *Ring) Fd() int {
 }
 
 func (r *Ring) Close() error {
-	return errors.Join(r.freeRing(), syscall.Close(r.fd))
+	r.closed.Store(true)
+	err := r.freeRing()
+	return joinErr(err, syscall.Close(r.fd))
+}
+
+// IsClosed returns true if the ring has been closed.
+func (r *Ring) IsClosed() bool {
+	return r.closed.Load()
 }
 
 var ErrSQOverflow = errors.New("sq ring overflow")
@@ -335,6 +353,9 @@ func (r *Ring) getCQEvents(params getParams) (cqe *CQEvent, err error) {
 
 // WaitCQEventsWithTimeout wait cnt CQEs in CQ. Timeout will be exceeded if no new CQEs in queue.
 func (r *Ring) WaitCQEventsWithTimeout(cnt uint32, timeout time.Duration) (cqe *CQEvent, err error) {
+	if r.closed.Load() {
+		return nil, ErrRingClosed
+	}
 	if r.Params.ExtArgFeature() {
 		ts := syscall.NsecToTimespec(timeout.Nanoseconds())
 		arg := newGetEventsArg(uintptr(unsafe.Pointer(nil)), numSig/8, uintptr(unsafe.Pointer(&ts)))
@@ -417,6 +438,9 @@ func (r *Ring) AdvanceCQ(n uint32) {
 }
 
 func (r *Ring) peekCQEvent() (uint32, *CQEvent, error) {
+	if r.closed.Load() {
+		return 0, nil, ErrRingClosed
+	}
 	mask := *r.cqRing.kRingMask
 	var cqe *CQEvent
 	var available uint32

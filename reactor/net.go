@@ -91,6 +91,19 @@ func (r *NetworkReactor) Run(ctx context.Context) {
 	}
 }
 
+// RunAsync starts NetworkReactor in a goroutine and returns a channel that is closed when
+// the reactor has fully stopped (after context cancellation and all loops have terminated).
+func (r *NetworkReactor) RunAsync(ctx context.Context) <-chan struct{} {
+	done := make(chan struct{})
+
+	go func() {
+		r.Run(ctx)
+		close(done)
+	}()
+
+	return done
+}
+
 // NetOperation must be implemented by NetworkReactor supported operations.
 type NetOperation interface {
 	uring.Operation
@@ -157,6 +170,7 @@ type ringNetEventLoop struct {
 	stopPublisherCh chan struct{}
 
 	submitAllowed uint32
+	closed        atomic.Bool // set when publisher is stopping
 
 	log *log.Logger
 }
@@ -182,12 +196,23 @@ func (loop *ringNetEventLoop) runConsumer(tickDuration time.Duration) {
 
 	cqeBuff := make([]*uring.CQEvent, cqeBuffSize)
 	for {
-		loop.submitSignal <- struct{}{}
+		// Check for stop or send submit signal
+		select {
+		case <-loop.stopConsumerCh:
+			close(loop.stopConsumerCh)
+			return
+		case loop.submitSignal <- struct{}{}:
+		}
 
 		_, err := loop.ring.WaitCQEventsWithTimeout(1, tickDuration)
 		if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EINTR) || errors.Is(err, syscall.ETIME) {
 			runtime.Gosched()
-			goto CheckCtxAndContinue
+			continue
+		}
+
+		if errors.Is(err, uring.ErrRingClosed) {
+			// Ring was closed, exit gracefully
+			return
 		}
 
 		if err != nil {
@@ -195,7 +220,13 @@ func (loop *ringNetEventLoop) runConsumer(tickDuration time.Duration) {
 			goto CheckCtxAndContinue
 		}
 
-		loop.submitSignal <- struct{}{}
+		// Check for stop or send submit signal
+		select {
+		case <-loop.stopConsumerCh:
+			close(loop.stopConsumerCh)
+			return
+		case loop.submitSignal <- struct{}{}:
+		}
 
 		for n := loop.ring.PeekCQEventBatch(cqeBuff); n > 0; n = loop.ring.PeekCQEventBatch(cqeBuff) {
 			for i := 0; i < n; i++ {
@@ -234,11 +265,21 @@ func (loop *ringNetEventLoop) close() {
 }
 
 func (loop *ringNetEventLoop) cancel(id RequestID) {
+	// Don't attempt to cancel if the publisher is closed
+	if loop.closed.Load() {
+		return
+	}
+
 	op := uring.Cancel(uint64(id), 0)
 
-	loop.reqBuss <- subSqeRequest{
+	// Use non-blocking send to avoid race with publisher closing
+	select {
+	case loop.reqBuss <- subSqeRequest{
 		op:       op,
 		userData: cancelNonce,
+	}:
+	default:
+		// Channel full or closed, ignore
 	}
 }
 
@@ -279,6 +320,8 @@ func (loop *ringNetEventLoop) runPublisher() {
 			}
 
 		case <-loop.stopPublisherCh:
+			loop.closed.Store(true)
+			close(loop.stopPublisherCh)
 			return
 		}
 	}

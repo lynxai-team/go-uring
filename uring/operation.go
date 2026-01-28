@@ -83,6 +83,12 @@ const (
 	lastCode
 )
 
+// Extended op codes (not contiguous with above)
+const (
+	SendZCCode    OpCode = 53 // IORING_OP_SEND_ZC
+	SendMsgZCCode OpCode = 54 // IORING_OP_SENDMSG_ZC
+)
+
 // NopOp - do not perform any I/O. This is useful for testing the performance of the io_uring implementation itself.
 type NopOp struct {
 }
@@ -330,6 +336,108 @@ func (op *SendOp) Fd() int {
 
 func (op *SendOp) Code() OpCode {
 	return SendCode
+}
+
+// SendMsgOp sends a message using sendmsg(2) semantics with scatter/gather I/O.
+// This allows sending multiple buffers (iovecs) in a single operation.
+type SendMsgOp struct {
+	fd       uintptr
+	msg      *syscall.Msghdr
+	msgFlags uint32
+}
+
+// SendMsg creates a vectored send operation.
+// The iovecs parameter contains the scatter/gather array of buffers to send.
+// This is more efficient than multiple Send calls when sending header+payload.
+func SendMsg(socketFd uintptr, iovecs []syscall.Iovec, msgFlags uint32) *SendMsgOp {
+	msg := &syscall.Msghdr{
+		Iov:    &iovecs[0],
+		Iovlen: uint64(len(iovecs)),
+	}
+	return &SendMsgOp{
+		fd:       socketFd,
+		msg:      msg,
+		msgFlags: msgFlags,
+	}
+}
+
+func (op *SendMsgOp) PrepSQE(sqe *SQEntry) {
+	sqe.fill(opSendMsg, int32(op.fd), uintptr(unsafe.Pointer(op.msg)), 1, 0)
+	sqe.OpcodeFlags = op.msgFlags
+}
+
+func (op *SendMsgOp) Fd() int {
+	return int(op.fd)
+}
+
+func (op *SendMsgOp) Code() OpCode {
+	return opSendMsg
+}
+
+// RecvMsgOp receives a message using recvmsg(2) semantics with scatter/gather I/O.
+type RecvMsgOp struct {
+	fd       uintptr
+	msg      *syscall.Msghdr
+	msgFlags uint32
+}
+
+// RecvMsg creates a vectored receive operation.
+func RecvMsg(socketFd uintptr, iovecs []syscall.Iovec, msgFlags uint32) *RecvMsgOp {
+	msg := &syscall.Msghdr{
+		Iov:    &iovecs[0],
+		Iovlen: uint64(len(iovecs)),
+	}
+	return &RecvMsgOp{
+		fd:       socketFd,
+		msg:      msg,
+		msgFlags: msgFlags,
+	}
+}
+
+func (op *RecvMsgOp) PrepSQE(sqe *SQEntry) {
+	sqe.fill(opRecvMsg, int32(op.fd), uintptr(unsafe.Pointer(op.msg)), 1, 0)
+	sqe.OpcodeFlags = op.msgFlags
+}
+
+func (op *RecvMsgOp) Fd() int {
+	return int(op.fd)
+}
+
+func (op *RecvMsgOp) Code() OpCode {
+	return opRecvMsg
+}
+
+// SendZCOp sends data using zero-copy semantics (IORING_OP_SEND_ZC).
+// The kernel will send directly from the userspace buffer without copying.
+// The buffer must remain valid until the CQE is received.
+// Requires Linux 6.0+.
+type SendZCOp struct {
+	fd       uintptr
+	buff     []byte
+	msgFlags uint32
+}
+
+// SendZC creates a zero-copy send operation.
+// WARNING: The buffer must remain valid until the CQE is received!
+func SendZC(socketFd uintptr, buff []byte, msgFlags uint32) *SendZCOp {
+	return &SendZCOp{
+		fd:       socketFd,
+		buff:     buff,
+		msgFlags: msgFlags,
+	}
+}
+
+func (op *SendZCOp) PrepSQE(sqe *SQEntry) {
+	sqe.fill(SendZCCode, int32(op.fd), uintptr(unsafe.Pointer(&op.buff[0])), uint32(len(op.buff)), 0)
+	sqe.OpcodeFlags = op.msgFlags
+}
+
+func (op *SendZCOp) Fd() int {
+	return int(op.fd)
+}
+
+func (op *SendZCOp) Code() OpCode {
+	return SendZCCode
 }
 
 // ProvideBuffersOp .
