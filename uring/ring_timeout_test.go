@@ -5,12 +5,12 @@ package uring
 import (
 	"errors"
 	"runtime"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 // TestSingleTimeout test single timeout command.
@@ -27,7 +27,7 @@ func TestSingleTimeout(t *testing.T) {
 
 	cqe, err := r.WaitCQEvents(1)
 	require.NoError(t, err)
-	assert.Equal(t, syscall.ETIME, cqe.Error())
+	assert.Equal(t, unix.ETIME, cqe.Error())
 
 	assert.True(t, time.Since(submitTime) > time.Second)
 }
@@ -49,7 +49,7 @@ func TestMultipleTimeout(t *testing.T) {
 ENDTEST:
 	for {
 		cqe, err := r.WaitCQEvents(1)
-		if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EINTR) {
+		if errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.EINTR) {
 			runtime.Gosched()
 			continue
 		}
@@ -89,11 +89,11 @@ func TestSingleTimeoutWait(t *testing.T) {
 	i := 0
 	for {
 		cqe, err := r.WaitCQEventsWithTimeout(2, time.Second*2)
-		if errors.Is(err, syscall.ETIME) {
+		if errors.Is(err, unix.ETIME) {
 			break
 		}
 
-		if errors.Is(err, syscall.EINTR) || errors.Is(err, syscall.EAGAIN) {
+		if errors.Is(err, unix.EINTR) || errors.Is(err, unix.EAGAIN) {
 			runtime.Gosched()
 			continue
 		}

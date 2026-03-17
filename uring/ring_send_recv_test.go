@@ -5,11 +5,11 @@ package uring
 import (
 	"net"
 	"sync"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 var str = "This is a test of sendmsg and recvmsg over io_uring!"
@@ -73,7 +73,7 @@ func recv(t *testing.T, cond *sync.Cond) {
 	cqe, err := ring.WaitCQEvents(1)
 	require.NoError(t, err)
 
-	if cqe.Error() == syscall.EINVAL {
+	if cqe.Error() == unix.EINVAL {
 		t.Skipf("Skipped, recv not supported on this kernel")
 	}
 	require.NoError(t, cqe.Error())

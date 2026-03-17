@@ -8,11 +8,11 @@ import (
 	"fmt"
 	"math/rand"
 	"os"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -25,7 +25,7 @@ const (
 func TestIOPoll(t *testing.T) {
 	var fName string
 	{
-		testFile, err := os.Create(fmt.Sprintf(".basic-rw-%d-%d", rand.Uint32(), syscall.Getpid()))
+		testFile, err := os.Create(fmt.Sprintf(".basic-rw-%d-%d", rand.Uint32(), unix.Getpid()))
 		require.NoError(t, err)
 		_, err = testFile.Write(bytes.Repeat([]byte("io"), fileSize/2))
 		require.NoError(t, err)
@@ -123,11 +123,11 @@ func testIO(t *testing.T, fName string, vectors [][]byte, write, bufSelect bool)
 
 	var flags int
 	if write {
-		flags |= syscall.O_WRONLY
+		flags |= unix.O_WRONLY
 	} else {
-		flags |= syscall.O_RDONLY
+		flags |= unix.O_RDONLY
 	}
-	file, err := os.OpenFile(fName, flags|syscall.O_DIRECT, 0o644)
+	file, err := os.OpenFile(fName, flags|unix.O_DIRECT, 0o644)
 	require.NoError(t, err)
 	defer file.Close()
 
@@ -161,7 +161,7 @@ func testIO(t *testing.T, fName string, vectors [][]byte, write, bufSelect bool)
 		cqe, err := ring.WaitCQEvents(1)
 		require.NoError(t, err)
 
-		if cqe.Error() != nil && errors.Is(cqe.Error(), syscall.EOPNOTSUPP) {
+		if cqe.Error() != nil && errors.Is(cqe.Error(), unix.EOPNOTSUPP) {
 			t.Skipf("File/device/fs doesn't support polled IO")
 		}
 

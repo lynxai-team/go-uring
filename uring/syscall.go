@@ -5,8 +5,9 @@ package uring
 import (
 	"math"
 	"os"
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -57,10 +58,10 @@ func sysEnter(ringFD int, toSubmit uint32, minComplete uint32, flags uint32, sig
 
 func sysEnter2(ringFD int, toSubmit uint32, minComplete uint32, flags uint32, sig unsafe.Pointer, sz int, raw bool) (uint, error) {
 	var consumed uintptr
-	var errno syscall.Errno
+	var errno unix.Errno
 
 	if raw {
-		consumed, _, errno = syscall.RawSyscall6(
+		consumed, _, errno = unix.RawSyscall6(
 			sysRingEnter,
 			uintptr(ringFD),
 			uintptr(toSubmit),
@@ -70,7 +71,7 @@ func sysEnter2(ringFD int, toSubmit uint32, minComplete uint32, flags uint32, si
 			uintptr(sz),
 		)
 	} else {
-		consumed, _, errno = syscall.Syscall6(
+		consumed, _, errno = unix.Syscall6(
 			sysRingEnter,
 			uintptr(ringFD),
 			uintptr(toSubmit),
@@ -89,7 +90,7 @@ func sysEnter2(ringFD int, toSubmit uint32, minComplete uint32, flags uint32, si
 }
 
 func sysSetup(entries uint32, params *ringParams) (int, error) {
-	fd, _, errno := syscall.Syscall(sysRingSetup, uintptr(entries), uintptr(unsafe.Pointer(params)), 0)
+	fd, _, errno := unix.Syscall(sysRingSetup, uintptr(entries), uintptr(unsafe.Pointer(params)), 0)
 	if errno != 0 {
 		return int(fd), os.NewSyscallError("io_uring_setup", errno)
 	}
@@ -98,7 +99,7 @@ func sysSetup(entries uint32, params *ringParams) (int, error) {
 }
 
 func sysRegister(ringFD int, op int, arg unsafe.Pointer, nrArgs int) error {
-	_, _, errno := syscall.Syscall6(
+	_, _, errno := unix.Syscall6(
 		sysRingRegister,
 		uintptr(ringFD),
 		uintptr(op),
@@ -165,7 +166,7 @@ type CQEvent struct {
 
 func (cqe *CQEvent) Error() error {
 	if cqe.Res < 0 {
-		return syscall.Errno(uintptr(-cqe.Res))
+		return unix.Errno(uintptr(-cqe.Res))
 	}
 	return nil
 }

@@ -37,7 +37,7 @@ func makeTCPListener(addr string) (*net.TCPListener, uintptr, error) {
 				if err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
 					return
 				}
-				if err = syscall.SetNonblock(int(fd), false); err != nil {
+				if err = unix.SetNonblock(int(fd), false); err != nil {
 					return
 				}
 				fdescr = fd
@@ -67,7 +67,7 @@ func TestAccept(t *testing.T) {
 
 func TestAcceptWithSQPoll(t *testing.T) {
 	ring, err := New(64, WithSQPoll(time.Millisecond*100))
-	if errors.Is(err, syscall.EPERM) {
+	if errors.Is(err, unix.EPERM) {
 		t.Skipf("SQ_POLL flag require root previligies or CAP_SYS_NICE capability")
 	}
 	require.NoError(t, err)
@@ -133,7 +133,7 @@ func acceptConnection(t *testing.T, ring *Ring, fd uintptr) (cfd uintptr, err er
 }
 
 func queueSend(ring *Ring, fd uintptr, buff []byte) error {
-	op := &WriteVOp{FD: fd, IOVecs: []syscall.Iovec{
+	op := &WriteVOp{FD: fd, IOVecs: []unix.Iovec{
 		{
 			Base: &buff[0],
 			Len:  uint64(len(buff)),
@@ -143,7 +143,7 @@ func queueSend(ring *Ring, fd uintptr, buff []byte) error {
 }
 
 func queueRecv(ring *Ring, fd uintptr, buff []byte) error {
-	op := &ReadVOp{FD: fd, IOVecs: []syscall.Iovec{
+	op := &ReadVOp{FD: fd, IOVecs: []unix.Iovec{
 		{
 			Base: &buff[0],
 			Len:  uint64(len(buff)),
@@ -189,9 +189,9 @@ func TestAcceptCancel(t *testing.T) {
 			require.NoError(t, err)
 
 			if cqe.UserData == 1 {
-				assert.True(t, cqe.Error() == syscall.EINTR || cqe.Error() == syscall.ECANCELED)
+				assert.True(t, cqe.Error() == unix.EINTR || cqe.Error() == unix.ECANCELED)
 			} else if cqe.UserData == 2 {
-				assert.True(t, cqe.Error() == syscall.EALREADY || cqe.Error() == nil)
+				assert.True(t, cqe.Error() == unix.EALREADY || cqe.Error() == nil)
 			}
 			ring.SeenCQE(cqe)
 		}
@@ -237,7 +237,7 @@ func TestAcceptMany(t *testing.T) {
 		}
 
 		_, err = ring.PeekCQE()
-		assert.True(t, errors.Is(err, syscall.EAGAIN))
+		assert.True(t, errors.Is(err, unix.EAGAIN))
 
 		for _, l := range listeners {
 			assert.NoError(t, l.Close())
@@ -256,16 +256,16 @@ type linkTestCase struct {
 // TestAcceptLink test accept with linked IORING_OP_LINK_TIMEOUT sqe.
 func TestAcceptLink(t *testing.T) {
 	testCases := []linkTestCase{
-		{doConnect: true, timeout: time.Second, expected: [2]error{nil, syscall.ECANCELED}},
+		{doConnect: true, timeout: time.Second, expected: [2]error{nil, unix.ECANCELED}},
 	}
 
 	ring, err := New(1)
 	require.NoError(t, err)
 
 	if ring.Params.FastPollFeature() {
-		testCases = append(testCases, linkTestCase{doConnect: false, timeout: time.Millisecond * 200, expected: [2]error{syscall.ECANCELED, syscall.ETIME}})
+		testCases = append(testCases, linkTestCase{doConnect: false, timeout: time.Millisecond * 200, expected: [2]error{unix.ECANCELED, unix.ETIME}})
 	} else {
-		testCases = append(testCases, linkTestCase{doConnect: false, timeout: time.Millisecond * 200, expected: [2]error{syscall.EINTR, syscall.EALREADY}})
+		testCases = append(testCases, linkTestCase{doConnect: false, timeout: time.Millisecond * 200, expected: [2]error{unix.EINTR, unix.EALREADY}})
 	}
 	require.NoError(t, ring.Close())
 
@@ -317,7 +317,7 @@ func recvG(t *testing.T, port int, tc linkTestCase, syncChan chan struct{}) {
 
 		idx := cqe.UserData - 1
 		if cqe.Error() != tc.expected[idx] {
-			if cqe.Error() == syscall.EBADFD {
+			if cqe.Error() == unix.EBADFD {
 				t.Skipf("Skipped, accept not supported")
 			}
 			t.Fatalf("expected err: %s, got: %s", tc.expected[idx], cqe.Error())

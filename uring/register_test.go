@@ -5,11 +5,11 @@ package uring
 import (
 	"errors"
 	"runtime"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 // TestProbe test IORING_REGISTER_PROBE
@@ -19,7 +19,7 @@ func TestProbe(t *testing.T) {
 	defer ring.Close()
 
 	probe, err := ring.Probe()
-	if errors.Is(err, syscall.EINVAL) {
+	if errors.Is(err, unix.EINVAL) {
 		t.Skip("Skipped, IORING_REGISTER_PROBE not supported")
 	}
 	require.NoError(t, err)
@@ -39,7 +39,7 @@ func TestIOWQMaxWorkers(t *testing.T) {
 	defer ring.Close()
 
 	err = ring.SetIOWQMaxWorkers(runtime.NumCPU())
-	if errors.Is(err, syscall.EINVAL) {
+	if errors.Is(err, unix.EINVAL) {
 		t.Skip("Skipped, IORING_REGISTER_IOWQ_MAX_WORKERS not supported")
 	}
 	require.NoError(t, err)

@@ -3,8 +3,9 @@
 package uring
 
 import (
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 // io_uring_register(2) opcodes and arguments
@@ -63,7 +64,7 @@ func (r *Ring) SetIOWQMaxWorkers(count int) error {
 }
 
 // RegisterBuffers register shared buffers.
-func (r *Ring) RegisterBuffers(buffers []syscall.Iovec) error {
+func (r *Ring) RegisterBuffers(buffers []unix.Iovec) error {
 	err := sysRegister(r.fd, sysRingRegisterBuffers, unsafe.Pointer(&buffers[0]), len(buffers))
 	return err
 }

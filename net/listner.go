@@ -6,7 +6,6 @@ import (
 	"context"
 	"net"
 	"os"
-	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
@@ -66,7 +65,7 @@ func NewListener(lc net.ListenConfig, addr string, reactor *reactor.NetworkReact
 }
 
 func serverSocket(tcpAddr *net.TCPAddr) (int, error) {
-	sockFd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM|syscall.SOCK_CLOEXEC, 0)
+	sockFd, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return 0, err
 	}
@@ -75,16 +74,16 @@ func serverSocket(tcpAddr *net.TCPAddr) (int, error) {
 		return 0, err
 	}
 
-	addr := syscall.SockaddrInet4{
+	addr := unix.SockaddrInet4{
 		Port: tcpAddr.Port,
 	}
 	copy(addr.Addr[:], tcpAddr.IP.To4())
 
-	if err = syscall.Bind(sockFd, &addr); err != nil {
+	if err = unix.Bind(sockFd, &addr); err != nil {
 		return 0, os.NewSyscallError("bind", err)
 	}
 
-	if err = syscall.Listen(sockFd, syscall.SOMAXCONN); err != nil {
+	if err = unix.Listen(sockFd, unix.SOMAXCONN); err != nil {
 		return 0, os.NewSyscallError("listen", err)
 	}
 
@@ -131,22 +130,22 @@ func setKeepAlivePeriod(fd int, d time.Duration) error {
 }
 
 func setDefaultListenerSockopts(s int) error {
-	err := os.NewSyscallError("setsockopt", syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1))
+	err := os.NewSyscallError("setsockopt", unix.SetsockoptInt(s, unix.SOL_SOCKET, unix.SO_REUSEADDR, 1))
 	if err != nil {
 		return err
 	}
 
-	err = os.NewSyscallError("setsockopt", syscall.SetsockoptInt(s, syscall.SOL_SOCKET, syscall.SO_REUSEPORT, 1))
+	err = os.NewSyscallError("setsockopt", unix.SetsockoptInt(s, unix.SOL_SOCKET, unix.SO_REUSEPORT, 1))
 	if err != nil {
 		return err
 	}
 
-	err = os.NewSyscallError("setsockopt", syscall.SetsockoptInt(s, syscall.SOL_TCP, syscall.TCP_NODELAY, 1))
+	err = os.NewSyscallError("setsockopt", unix.SetsockoptInt(s, unix.SOL_TCP, unix.TCP_NODELAY, 1))
 	if err != nil {
 		return err
 	}
 
-	return os.NewSyscallError("setsockopt", syscall.SetNonblock(s, false))
+	return os.NewSyscallError("setsockopt", unix.SetNonblock(s, false))
 }
 
 func roundDurationUp(d time.Duration, to time.Duration) time.Duration {
@@ -154,7 +153,7 @@ func roundDurationUp(d time.Duration, to time.Duration) time.Duration {
 }
 
 func wrapSyscallError(name string, err error) error {
-	if _, ok := err.(syscall.Errno); ok {
+	if _, ok := err.(unix.Errno); ok {
 		err = os.NewSyscallError(name, err)
 	}
 	return err
@@ -168,7 +167,7 @@ func boolint(b bool) int {
 }
 
 func (l *Listener) Close() (err error) {
-	err = syscall.Close(l.sockFd)
+	err = unix.Close(l.sockFd)
 	l.stopReactorFn()
 	return err
 }

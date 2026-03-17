@@ -28,7 +28,7 @@ package main
 
 import (
    "fmt"
-   "github.com/godzie44/go-uring/uring"
+   "github.com/lynxai-team/go-uring/uring"
    "os"
 )
 
@@ -70,7 +70,7 @@ package main
 
 import (
    "fmt"
-   "github.com/godzie44/go-uring/uring"
+   "github.com/lynxai-team/go-uring/uring"
    "syscall"
 )
 
@@ -81,13 +81,13 @@ func main() {
    defer ring.Close()
 
    // create server socket
-   socketFd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+   socketFd, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
    noErr(err)
-   defer syscall.Close(socketFd)
+   defer unix.Close(socketFd)
 
-   addr := syscall.SockaddrInet4{Port: 8081}
-   noErr(syscall.Bind(socketFd, &addr))
-   noErr(syscall.Listen(socketFd, syscall.SOMAXCONN))
+   addr := unix.SockaddrInet4{Port: 8081}
+   noErr(unix.Bind(socketFd, &addr))
+   noErr(unix.Listen(socketFd, unix.SOMAXCONN))
 
    for {
       // add Accept operation to SQ queue
@@ -146,8 +146,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/godzie44/go-uring/reactor"
-	"github.com/godzie44/go-uring/uring"
+	"github.com/lynxai-team/go-uring/reactor"
+	"github.com/lynxai-team/go-uring/uring"
 	"os"
 	"os/signal"
 )
@@ -189,8 +189,8 @@ package main
 import (
 	"context"
 	"fmt"
-	"github.com/godzie44/go-uring/reactor"
-	"github.com/godzie44/go-uring/uring"
+	"github.com/lynxai-team/go-uring/reactor"
+	"github.com/lynxai-team/go-uring/uring"
 	"syscall"
 )
 
@@ -206,12 +206,12 @@ func main() {
 	}()
 
 	// create server socket
-	socketFd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+	socketFd, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	noErr(err)
-	defer syscall.Close(socketFd)
-	addr := syscall.SockaddrInet4{Port: 8081}
-	noErr(syscall.Bind(socketFd, &addr))
-	noErr(syscall.Listen(socketFd, syscall.SOMAXCONN))
+	defer unix.Close(socketFd)
+	addr := unix.SockaddrInet4{Port: 8081}
+	noErr(unix.Bind(socketFd, &addr))
+	noErr(unix.Listen(socketFd, unix.SOMAXCONN))
 
 	acceptChan := make(chan int32)
 	for {
@@ -238,14 +238,14 @@ This is the implementation of net.Listener and net.Conn interfaces. Uses NetReac
 
 Single thread echo-server (listens on a specific TCP port and as soon as any data arrives at this port, it immediately forwards it back to the sender) implemented with go-uring.
 Useful for compare GO go-uring lib realization with liburing realization.
-See [source code](https://github.com/godzie44/go-uring/blob/master/example/echo-server/main.go) and [benchmarks](https://github.com/godzie44/go-uring/blob/master/example/echo-server/benchmark.md) for familiarization.
+See [source code](https://github.com/lynxai-team/go-uring/blob/master/example/echo-server/main.go) and [benchmarks](https://github.com/lynxai-team/go-uring/blob/master/example/echo-server/benchmark.md) for familiarization.
 
 #### GO-style TCP echo-server
 
 Echo-server (listens on a specific TCP port and as soon as any data arrives at this port, it immediately forwards it back to the sender) implemented with go-uring and reactor packages. 
 Realization similar with realization of echo-server with net/http package (benchmarks attached).
-See [source code](https://github.com/godzie44/go-uring/blob/master/example/echo-server-multi-thread/main.go) and [benchmarks](https://github.com/godzie44/go-uring/blob/master/example/echo-server-multi-thread/Benchmark.md) for familiarization.
+See [source code](https://github.com/lynxai-team/go-uring/blob/master/example/echo-server-multi-thread/main.go) and [benchmarks](https://github.com/lynxai-team/go-uring/blob/master/example/echo-server-multi-thread/Benchmark.md) for familiarization.
 
 #### HTTP server
 
-Example of HTTP-server implemented with io_uring. [Sources](https://github.com/godzie44/go-uring/blob/master/example/http-server/main.go).
+Example of HTTP-server implemented with io_uring. [Sources](https://github.com/lynxai-team/go-uring/blob/master/example/http-server/main.go).

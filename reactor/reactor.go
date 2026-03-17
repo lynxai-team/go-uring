@@ -9,10 +9,10 @@ import (
 	"runtime"
 	"sync"
 	"sync/atomic"
-	"syscall"
 	"time"
 
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/uring"
+	"golang.org/x/sys/unix"
 )
 
 type Callback func(event uring.CQEvent)
@@ -166,7 +166,7 @@ func (loop *ringEventLoop) runConsumer(tickDuration time.Duration) {
 
 		_, err := loop.ring.WaitCQEventsWithTimeout(1, tickDuration)
 
-		if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EINTR) || errors.Is(err, syscall.ETIME) {
+		if errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.EINTR) || errors.Is(err, unix.ETIME) {
 			runtime.Gosched()
 			goto CheckCtxAndContinue
 		}

@@ -3,10 +3,10 @@ package uring
 import (
 	"net"
 	"net/http"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 func TestConnect(t *testing.T) {
@@ -18,9 +18,9 @@ func TestConnect(t *testing.T) {
 	stopServer := startServer(t, addr)
 	defer stopServer()
 
-	socketFd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+	socketFd, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	require.NoError(t, err)
-	defer syscall.Close(socketFd)
+	defer unix.Close(socketFd)
 
 	tcpAddr, err := net.ResolveTCPAddr("tcp", addr)
 	require.NoError(t, err)

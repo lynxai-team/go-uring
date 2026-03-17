@@ -9,10 +9,10 @@ import (
 	"math"
 	"runtime"
 	"sync/atomic"
-	"syscall"
 	"time"
 
 	"github.com/lynxai-team/go-uring/uring"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -189,10 +189,7 @@ func newRingNetEventLoop(ring *uring.Ring, logger *log.Logger, registry *cbRegis
 
 func (loop *ringNetEventLoop) runConsumer(tickDuration time.Duration) {
 	// runtime.LockOSThread()
-<<<<<<< HEAD
-=======
 	defer close(loop.submitSignal)
->>>>>>> d0e7e6b (untangle channel fuckery, add in a dialer)
 
 	cqeBuff := make([]*uring.CQEvent, cqeBuffSize)
 	for {
@@ -205,7 +202,7 @@ func (loop *ringNetEventLoop) runConsumer(tickDuration time.Duration) {
 		}
 
 		_, err := loop.ring.WaitCQEventsWithTimeout(1, tickDuration)
-		if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EINTR) || errors.Is(err, syscall.ETIME) {
+		if errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.EINTR) || errors.Is(err, unix.ETIME) {
 			runtime.Gosched()
 			continue
 		}
@@ -311,7 +308,7 @@ func (loop *ringNetEventLoop) runPublisher() {
 			if atomic.CompareAndSwapUint32(&loop.submitAllowed, 1, 0) {
 				_, err = loop.ring.Submit()
 				if err != nil {
-					if errors.Is(err, syscall.EBUSY) || errors.Is(err, syscall.EAGAIN) {
+					if errors.Is(err, unix.EBUSY) || errors.Is(err, unix.EAGAIN) {
 						atomic.StoreUint32(&loop.submitAllowed, 1)
 					} else {
 						loop.log.Println("io_uring", loop.ring.Fd(), "submit", err)

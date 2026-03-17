@@ -10,11 +10,11 @@ import (
 	"os"
 	"runtime"
 	"sync"
-	"syscall"
 	"time"
 
-	"github.com/outofforest/go-uring/reactor"
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/reactor"
+	"github.com/lynxai-team/go-uring/uring"
+	"golang.org/x/sys/unix"
 )
 
 type Conn struct {
@@ -63,7 +63,7 @@ func (c *Conn) Read(b []byte) (n int, err error) {
 	cqe := <-c.readChan
 
 	if err = cqe.Error(); err != nil {
-		if errors.Is(err, syscall.ECANCELED) {
+		if errors.Is(err, unix.ECANCELED) {
 			err = fmt.Errorf("%w: %s", os.ErrDeadlineExceeded, err.Error())
 		}
 
@@ -92,7 +92,7 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 	cqe := <-c.writeChan
 
 	if err = cqe.Error(); err != nil {
-		if errors.Is(err, syscall.ECANCELED) {
+		if errors.Is(err, unix.ECANCELED) {
 			err = fmt.Errorf("%w: %s", os.ErrDeadlineExceeded, err.Error())
 		}
 
@@ -107,7 +107,7 @@ func (c *Conn) Write(b []byte) (n int, err error) {
 }
 
 func (c *Conn) Close() error {
-	err := syscall.Close(c.fd)
+	err := unix.Close(c.fd)
 	if err != nil {
 		err = &net.OpError{Op: "close", Net: "tcp", Source: c.lAddr, Addr: c.rAddr, Err: err}
 	}

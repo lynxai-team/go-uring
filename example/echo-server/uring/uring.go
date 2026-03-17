@@ -10,9 +10,9 @@ import (
 	"fmt"
 	"log"
 	"strconv"
-	"syscall"
 
 	"github.com/lynxai-team/go-uring/uring"
+	"golang.org/x/sys/unix"
 )
 
 const (
@@ -78,25 +78,25 @@ func main() { //nolint
 	// Note that when creating a socket we DO NOT SET the O_NON_BLOCK flag,
 	// but at the same time all reads and writes will not block the application.
 	// This happens because io_uring quietly turns blocking socket operations into non-block system calls.
-	serverSockFd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM, 0)
+	serverSockFd, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM, 0)
 	if err != nil {
 		log.Fatal(err)
 	}
-	defer syscall.Close(serverSockFd)
+	defer unix.Close(serverSockFd)
 
-	err = syscall.SetsockoptInt(serverSockFd, syscall.SOL_SOCKET, syscall.SO_REUSEADDR, 1)
+	err = unix.SetsockoptInt(serverSockFd, unix.SOL_SOCKET, unix.SO_REUSEADDR, 1)
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = syscall.Bind(serverSockFd, &syscall.SockaddrInet4{
+	err = unix.Bind(serverSockFd, &unix.SockaddrInet4{
 		Port: port,
 	})
 	if err != nil {
 		log.Fatal(err)
 	}
 
-	err = syscall.Listen(serverSockFd, Backlog)
+	err = unix.Listen(serverSockFd, Backlog)
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -134,7 +134,7 @@ func main() { //nolint
 
 		// Wait for at least one CQE to appear in the CQ buffer.
 		_, err = ring.WaitCQEvents(1)
-		if errors.Is(err, syscall.EAGAIN) || errors.Is(err, syscall.EINTR) {
+		if errors.Is(err, unix.EAGAIN) || errors.Is(err, unix.EINTR) {
 			continue
 		}
 		if err != nil {
@@ -162,7 +162,7 @@ func main() { //nolint
 				addAccept(ring, acceptOp)
 			case READ:
 				if res <= 0 {
-					_ = syscall.Shutdown(ud.fd, syscall.SHUT_RDWR)
+					_ = unix.Shutdown(ud.fd, unix.SHUT_RDWR)
 				} else {
 					addWrite(ring, ud.fd, res)
 				}

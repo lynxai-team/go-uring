@@ -5,7 +5,6 @@ package uring
 import (
 	"net"
 	"os"
-	"syscall"
 	"time"
 	"unsafe"
 
@@ -110,14 +109,14 @@ type ReadVOp struct {
 	FD     uintptr
 	Size   int64
 	Offset uint64
-	IOVecs []syscall.Iovec
+	IOVecs []unix.Iovec
 }
 
 // ReadV vectored read operation, similar to preadv2(2).
 func ReadV(file *os.File, vectors [][]byte, offset uint64) *ReadVOp {
-	buffs := make([]syscall.Iovec, len(vectors))
+	buffs := make([]unix.Iovec, len(vectors))
 	for i, v := range vectors {
-		buffs[i] = syscall.Iovec{
+		buffs[i] = unix.Iovec{
 			Base: &v[0],
 			Len:  uint64(len(v)),
 		}
@@ -137,14 +136,14 @@ func (op *ReadVOp) Code() OpCode {
 // WriteVOp vectored write operation, similar to pwritev2(2).
 type WriteVOp struct {
 	FD     uintptr
-	IOVecs []syscall.Iovec
+	IOVecs []unix.Iovec
 	Offset uint64
 }
 
 // WriteV vectored writes bytes to file. Write starts from offset.
 // If the file is not seekable, offset must be set to zero.
 func WriteV(file *os.File, bytes [][]byte, offset uint64) *WriteVOp {
-	buffs := make([]syscall.Iovec, len(bytes))
+	buffs := make([]unix.Iovec, len(bytes))
 	for i := range bytes {
 		buffs[i].SetLen(len(bytes[i]))
 		buffs[i].Base = &bytes[i][0]
@@ -174,7 +173,7 @@ func Timeout(duration time.Duration) *TimeoutOp {
 }
 
 func (op *TimeoutOp) PrepSQE(sqe *SQEntry) {
-	spec := syscall.NsecToTimespec(op.dur.Nanoseconds())
+	spec := unix.NsecToTimespec(op.dur.Nanoseconds())
 	sqe.fill(TimeoutCode, -1, uintptr(unsafe.Pointer(&spec)), 1, 0)
 }
 
@@ -264,7 +263,7 @@ func LinkTimeout(duration time.Duration) *LinkTimeoutOp {
 }
 
 func (op *LinkTimeoutOp) PrepSQE(sqe *SQEntry) {
-	spec := syscall.NsecToTimespec(op.dur.Nanoseconds())
+	spec := unix.NsecToTimespec(op.dur.Nanoseconds())
 	sqe.fill(LinkTimeoutCode, -1, uintptr(unsafe.Pointer(&spec)), 1, 0)
 }
 
@@ -342,15 +341,15 @@ func (op *SendOp) Code() OpCode {
 // This allows sending multiple buffers (iovecs) in a single operation.
 type SendMsgOp struct {
 	fd       uintptr
-	msg      *syscall.Msghdr
+	msg      *unix.Msghdr
 	msgFlags uint32
 }
 
 // SendMsg creates a vectored send operation.
 // The iovecs parameter contains the scatter/gather array of buffers to send.
 // This is more efficient than multiple Send calls when sending header+payload.
-func SendMsg(socketFd uintptr, iovecs []syscall.Iovec, msgFlags uint32) *SendMsgOp {
-	msg := &syscall.Msghdr{
+func SendMsg(socketFd uintptr, iovecs []unix.Iovec, msgFlags uint32) *SendMsgOp {
+	msg := &unix.Msghdr{
 		Iov:    &iovecs[0],
 		Iovlen: uint64(len(iovecs)),
 	}
@@ -377,13 +376,13 @@ func (op *SendMsgOp) Code() OpCode {
 // RecvMsgOp receives a message using recvmsg(2) semantics with scatter/gather I/O.
 type RecvMsgOp struct {
 	fd       uintptr
-	msg      *syscall.Msghdr
+	msg      *unix.Msghdr
 	msgFlags uint32
 }
 
 // RecvMsg creates a vectored receive operation.
-func RecvMsg(socketFd uintptr, iovecs []syscall.Iovec, msgFlags uint32) *RecvMsgOp {
-	msg := &syscall.Msghdr{
+func RecvMsg(socketFd uintptr, iovecs []unix.Iovec, msgFlags uint32) *RecvMsgOp {
+	msg := &unix.Msghdr{
 		Iov:    &iovecs[0],
 		Iovlen: uint64(len(iovecs)),
 	}
@@ -590,4 +589,3 @@ func (op *SocketOp) PrepSQE(sqe *SQEntry) {
 func (op *SocketOp) Code() OpCode {
 	return socketCode
 }
-

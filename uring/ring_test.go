@@ -4,11 +4,11 @@ package uring
 
 import (
 	"errors"
-	"syscall"
 	"testing"
 
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 func TestCreateRing(t *testing.T) {
@@ -54,8 +54,8 @@ func TestCreateManyRings(t *testing.T) {
 		require.NoError(t, err)
 
 		for _, r := range rings {
-			err = syscall.Close(r.Fd())
-			assert.ErrorIs(t, err, syscall.EBADF)
+			err = unix.Close(r.Fd())
+			assert.ErrorIs(t, err, unix.EBADF)
 		}
 	}
 }
@@ -114,7 +114,7 @@ func TestCQRingFull(t *testing.T) {
 	i := 0
 	for {
 		_, cqe, err := ring.peekCQEvent()
-		if err != nil && errors.Is(err, syscall.EAGAIN) {
+		if err != nil && errors.Is(err, unix.EAGAIN) {
 			break
 		}
 		if err != nil {
@@ -134,7 +134,7 @@ func TestCQRingFull(t *testing.T) {
 // TestCQRingSize test CQ ring sizing.
 func TestCQRingSize(t *testing.T) {
 	ring, err := New(4, WithCQSize(64))
-	if errors.Is(err, syscall.EINVAL) {
+	if errors.Is(err, unix.EINVAL) {
 		t.Skip("Skipped, not supported on this kernel")
 		return
 	}
@@ -162,7 +162,7 @@ func TestRingNopAllSizes(t *testing.T) {
 	var depth uint32 = 1
 	for depth <= MaxEntries {
 		ring, err := New(depth)
-		if errors.Is(err, syscall.ENOMEM) {
+		if errors.Is(err, unix.ENOMEM) {
 			t.Skip("Skipped, not enough memory:", depth, "entries")
 			return
 		}

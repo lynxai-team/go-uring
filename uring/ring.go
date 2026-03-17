@@ -7,9 +7,10 @@ import (
 	"fmt"
 	"runtime"
 	"sync/atomic"
-	"syscall"
 	"time"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 type sq struct {
@@ -84,7 +85,7 @@ func WithCQSize(sz uint32) SetupOption {
 // WithIOPoll enable IOPOLL option.
 func WithIOPoll() SetupOption {
 	return func(params *ringParams) {
-		params.flags = params.flags | setupIOPoll
+		params.flags = params.flags | SetupIOPoll
 	}
 }
 
@@ -201,7 +202,7 @@ func (r *Ring) Fd() int {
 func (r *Ring) Close() error {
 	r.closed.Store(true)
 	err := r.freeRing()
-	return joinErr(err, syscall.Close(r.fd))
+	return errors.Join(err, unix.Close(r.fd))
 }
 
 // IsClosed returns true if the ring has been closed.
@@ -317,7 +318,7 @@ func (r *Ring) getCQEvents(params getParams) (cqe *CQEvent, err error) {
 
 		if cqe == nil && params.waitNr == 0 && params.submit == 0 {
 			if !r.sqRing.cqNeedFlush() {
-				err = syscall.EAGAIN
+				err = unix.EAGAIN
 				break
 			}
 			cqOverflowFlush = true
@@ -357,7 +358,7 @@ func (r *Ring) WaitCQEventsWithTimeout(cnt uint32, timeout time.Duration) (cqe *
 		return nil, ErrRingClosed
 	}
 	if r.Params.ExtArgFeature() {
-		ts := syscall.NsecToTimespec(timeout.Nanoseconds())
+		ts := unix.NsecToTimespec(timeout.Nanoseconds())
 		arg := newGetEventsArg(uintptr(unsafe.Pointer(nil)), numSig/8, uintptr(unsafe.Pointer(&ts)))
 
 		cqe, err = r.getCQEvents(getParams{

@@ -2,9 +2,10 @@ package uring
 
 import (
 	"fmt"
-	"github.com/stretchr/testify/require"
-	"syscall"
 	"testing"
+
+	"github.com/stretchr/testify/require"
+	"golang.org/x/sys/unix"
 )
 
 func TestSocket(t *testing.T) {
@@ -12,9 +13,9 @@ func TestSocket(t *testing.T) {
 	require.NoError(t, err)
 	defer ring.Close()
 
-	domain := syscall.AF_INET
-	typ := syscall.SOCK_STREAM
-	protocol := syscall.IPPROTO_TCP
+	domain := unix.AF_INET
+	typ := unix.SOCK_STREAM
+	protocol := unix.IPPROTO_TCP
 
 	err = ring.QueueSQE(Socket(domain, typ, protocol), 0, 0)
 	require.NoError(t, err)
@@ -31,5 +32,5 @@ func TestSocket(t *testing.T) {
 
 	ring.SeenCQE(cqe)
 
-	defer syscall.Close(int(socketFd))
+	defer unix.Close(int(socketFd))
 }

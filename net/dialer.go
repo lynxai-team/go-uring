@@ -3,10 +3,10 @@ package net
 import (
 	"context"
 	gonet "net"
-	"syscall"
 
-	"github.com/godzie44/go-uring/reactor"
-	"github.com/godzie44/go-uring/uring"
+	"github.com/lynxai-team/go-uring/reactor"
+	"github.com/lynxai-team/go-uring/uring"
+	"golang.org/x/sys/unix"
 )
 
 type dialer struct {
@@ -14,7 +14,7 @@ type dialer struct {
 }
 
 func (d *dialer) DialContext(ctx context.Context, network, address string) (gonet.Conn, error) {
-	sockFd, err := syscall.Socket(syscall.AF_INET, syscall.SOCK_STREAM|syscall.SOCK_CLOEXEC, 0)
+	sockFd, err := unix.Socket(unix.AF_INET, unix.SOCK_STREAM|unix.SOCK_CLOEXEC, 0)
 	if err != nil {
 		return nil, err
 	}

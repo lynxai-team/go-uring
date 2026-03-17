@@ -4,8 +4,9 @@ package uring
 
 import (
 	"errors"
-	"syscall"
 	"unsafe"
+
+	"golang.org/x/sys/unix"
 )
 
 type (
@@ -98,7 +99,7 @@ func (r *Ring) allocRing(params *ringParams) error {
 		r.cqRing.ringSize = r.sqRing.ringSize
 	}
 
-	data, err := syscall.Mmap(r.fd, 0, int(r.sqRing.ringSize), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED|syscall.MAP_POPULATE)
+	data, err := unix.Mmap(r.fd, 0, int(r.sqRing.ringSize), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED|unix.MAP_POPULATE)
 	if err != nil {
 		return err
 	}
@@ -107,7 +108,7 @@ func (r *Ring) allocRing(params *ringParams) error {
 	if params.SingleMMapFeature() {
 		r.cqRing.buff = r.sqRing.buff
 	} else {
-		data, err = syscall.Mmap(r.fd, int64(cqRingOffset), int(r.cqRing.ringSize), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED|syscall.MAP_POPULATE)
+		data, err = unix.Mmap(r.fd, int64(cqRingOffset), int(r.cqRing.ringSize), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED|unix.MAP_POPULATE)
 		if err != nil {
 			_ = r.freeRing()
 			return err
@@ -125,7 +126,7 @@ func (r *Ring) allocRing(params *ringParams) error {
 	r.sqRing.kArray = (*uint32)(unsafe.Pointer(uintptr(unsafe.Pointer(ringStart)) + uintptr(params.sqOffset.array)))
 
 	sz := uintptr(params.sqEntries) * unsafe.Sizeof(SQEntry{})
-	buff, err := syscall.Mmap(r.fd, int64(sqesOffset), int(sz), syscall.PROT_READ|syscall.PROT_WRITE, syscall.MAP_SHARED|syscall.MAP_POPULATE)
+	buff, err := unix.Mmap(r.fd, int64(sqesOffset), int(sz), unix.PROT_READ|unix.PROT_WRITE, unix.MAP_SHARED|unix.MAP_POPULATE)
 	if err != nil {
 		_ = r.freeRing()
 		return err
@@ -151,11 +152,11 @@ func (r *Ring) allocRing(params *ringParams) error {
 }
 
 func (r *Ring) freeRing() (err error) {
-	err = syscall.Munmap(r.sqRing.buff)
+	err = unix.Munmap(r.sqRing.buff)
 
 	if r.cqRing.buff == nil || unsafe.SliceData(r.cqRing.buff) == unsafe.SliceData(r.sqRing.buff) {
 		return err
 	}
 
-	return errors.Join(err, syscall.Munmap(r.cqRing.buff))
+	return errors.Join(err, unix.Munmap(r.cqRing.buff))
 }

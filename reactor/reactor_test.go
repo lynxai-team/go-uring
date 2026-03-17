@@ -6,13 +6,13 @@ import (
 	"context"
 	"os"
 	"sync"
-	"syscall"
 	"testing"
 	"time"
 
 	"github.com/stretchr/testify/suite"
+	"golang.org/x/sys/unix"
 
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 type ReactorTestSuite struct {
@@ -90,7 +90,7 @@ func (ts *ReactorTestSuite) TestExecuteWithDeadline() {
 	cqe := <-acceptChan
 
 	ts.Require().NoError(err)
-	ts.Require().Error(cqe.Error(), syscall.ECANCELED)
+	ts.Require().Error(cqe.Error(), unix.ECANCELED)
 	ts.Require().True(time.Since(acceptTime) > time.Second && time.Since(acceptTime) < time.Second+time.Millisecond*100)
 }
 
@@ -114,7 +114,7 @@ func (ts *ReactorTestSuite) TestCancelOperation() {
 	}()
 
 	cqe := <-acceptChan
-	ts.Require().Error(cqe.Error(), syscall.ECANCELED)
+	ts.Require().Error(cqe.Error(), unix.ECANCELED)
 }
 
 func TestReactor(t *testing.T) {

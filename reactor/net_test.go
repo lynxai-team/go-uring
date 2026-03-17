@@ -15,7 +15,7 @@ import (
 	"github.com/stretchr/testify/suite"
 	"golang.org/x/sys/unix"
 
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 type NetworkReactorTestSuite struct {
@@ -69,7 +69,7 @@ func (ts *NetworkReactorTestSuite) TestExecuteWithDeadline() {
 	cqe := <-acceptChan
 
 	ts.Require().NoError(err)
-	ts.Require().Error(cqe.Error(), syscall.ECANCELED)
+	ts.Require().Error(cqe.Error(), unix.ECANCELED)
 	ts.Require().True(time.Since(acceptTime) > time.Second && time.Since(acceptTime) < time.Second+time.Millisecond*100)
 }
 
@@ -89,7 +89,7 @@ func (ts *NetworkReactorTestSuite) TestCancelOperation() {
 	}()
 
 	cqe := <-acceptChan
-	ts.Require().Error(cqe.Error(), syscall.ECANCELED)
+	ts.Require().Error(cqe.Error(), unix.ECANCELED)
 }
 
 func TestNetworkReactor(t *testing.T) {
@@ -130,7 +130,7 @@ func makeTCPListener(addr string) (*net.TCPListener, int, error) {
 				if err = unix.SetsockoptInt(int(fd), unix.SOL_SOCKET, unix.SO_REUSEPORT, 1); err != nil {
 					return
 				}
-				if err = syscall.SetNonblock(int(fd), false); err != nil {
+				if err = unix.SetNonblock(int(fd), false); err != nil {
 					return
 				}
 				fdescr = int(fd)
