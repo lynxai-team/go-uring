@@ -14,9 +14,9 @@ import (
 	"runtime"
 	"strconv"
 
-	"github.com/outofforest/go-uring/net"
-	"github.com/outofforest/go-uring/reactor"
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/net"
+	"github.com/lynxai-team/go-uring/reactor"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 //go:embed gopher.png

@@ -7,12 +7,11 @@ import (
 	"net"
 	"os"
 	"runtime"
-	"syscall"
 	"unsafe"
 
 	"golang.org/x/sys/unix"
 
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 type (
@@ -129,7 +128,7 @@ func (listener *Listener) Accept() (net.Conn, error) {
 	result := <-listener.AcceptChannel
 
 	if result < 0 {
-		return nil, syscall.Errno(uintptr(-result))
+		return nil, unix.Errno(uintptr(-result))
 	}
 
 	FD := uintptr(result)
@@ -179,7 +178,7 @@ func (listener *Listener) b1(i int) {
 		if err != nil {
 			switch typed := err.(type) {
 			case *os.SyscallError:
-				if typed.Err == syscall.EAGAIN || typed.Err == syscall.EINTR {
+				if typed.Err == unix.EAGAIN || typed.Err == unix.EINTR {
 					continue
 				}
 			}

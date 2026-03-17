@@ -10,8 +10,8 @@ import (
 	"github.com/stretchr/testify/assert"
 	"github.com/stretchr/testify/require"
 
-	"github.com/outofforest/go-uring/reactor"
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/reactor"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 func TestListenerAccept(t *testing.T) {

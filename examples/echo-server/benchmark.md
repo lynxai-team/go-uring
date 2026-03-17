@@ -31,7 +31,7 @@ __Linux 5.7 or higher__
 
 ### benchmark script
 
-[Source code](https://github.com/godzie44/go-uring/blob/master/example/echo-server/bench.sh)
+[Source code](https://github.com/lynxai-team/go-uring/blob/master/example/echo-server/bench.sh)
 
 * $1 - path to server executable
 * $2 - path to rust_echo_bench Cargo.toml

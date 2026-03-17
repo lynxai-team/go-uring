@@ -9,8 +9,8 @@ import (
 	gonet "net"
 	"time"
 
-	net "github.com/outofforest/go-uring/net2"
-	"github.com/outofforest/go-uring/uring"
+	net "github.com/lynxai-team/go-uring/net2"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 var (

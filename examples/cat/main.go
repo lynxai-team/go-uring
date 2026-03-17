@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/sys/unix"
 
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 type (

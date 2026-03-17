@@ -7,12 +7,11 @@ import (
 	"io"
 	"net"
 	"os"
-	"syscall"
 	"time"
 
 	"golang.org/x/sys/unix"
 
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 type (
@@ -46,9 +45,9 @@ func (connection *Connection) Read(buffer []byte) (n int, err error) {
 		return 0, &net.OpError{Op: "read", Net: "tcp", Source: nil, Addr: nil, Err: io.EOF}
 	}
 
-	err = syscall.Errno(uintptr(-result))
+	err = unix.Errno(uintptr(-result))
 
-	if err == syscall.ECANCELED {
+	if err == unix.ECANCELED {
 		err = fmt.Errorf("%w: %s", os.ErrDeadlineExceeded, err.Error())
 	}
 
@@ -69,9 +68,9 @@ func (connection *Connection) Write(buffer []byte) (n int, err error) {
 		return 0, &net.OpError{Op: "write", Net: "tcp", Source: nil, Addr: nil, Err: io.ErrUnexpectedEOF}
 	}
 
-	err = syscall.Errno(uintptr(-result))
+	err = unix.Errno(uintptr(-result))
 
-	if err == syscall.ECANCELED {
+	if err == unix.ECANCELED {
 		err = fmt.Errorf("%w: %s", os.ErrDeadlineExceeded, err.Error())
 	}
 

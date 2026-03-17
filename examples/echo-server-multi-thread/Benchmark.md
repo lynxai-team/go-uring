@@ -9,7 +9,7 @@ __Linux 5.11 or higher__
 * echo-server built with amd64_atomic tag using go-uring net-reactor as I/O backend
 * echo-server using net package (net.TCPListener and net.TCPConn) - with netpoller - default GO I/O backend
 
-Check [main.go](https://github.com/godzie44/go-uring/blob/master/example/echo-server-multi-thread/main.go) for familiarization.
+Check [main.go](https://github.com/lynxai-team/go-uring/blob/master/example/echo-server-multi-thread/main.go) for familiarization.
 
 ## system specs
 * Intel(R) Core(TM) i5-7500 CPU @ 3.40GHz, 16GB RAM, 4 physical cores
@@ -51,7 +51,7 @@ Echo-server's startup parameters:
 - go-uring + amd64_atomic tag - ./main -mode uring -ring-count 6 -wp-count 2
 - go-uring SQ_POLL mode + amd64_atomic tag - ./main -mode uring-sq-poll -ring-count 2 -wp-count 2
 
-[Source code](https://github.com/godzie44/go-uring/blob/master/example/echo-server-multi-thread/bench.sh)
+[Source code](https://github.com/lynxai-team/go-uring/blob/master/example/echo-server-multi-thread/bench.sh)
 
 * $1 - path to executable (with the necessary options)
 * $2 - path to rust_echo_bench Cargo.toml

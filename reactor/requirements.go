@@ -6,7 +6,7 @@ import (
 	"errors"
 	"fmt"
 
-	"github.com/outofforest/go-uring/uring"
+	"github.com/lynxai-team/go-uring/uring"
 )
 
 var ErrRequirements = errors.New("ring does not meet the requirements")
